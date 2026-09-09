@@ -1,152 +1,271 @@
+/* =========================
+   CLOCK
+   ========================= */
+
 function updateTime() {
-    var timeElement = document.querySelector("#timeElement");
-    var dateElement = document.querySelector("#dateElement");
     var now = new Date();
-    timeElement.textContent = now.toLocaleTimeString();
-    dateElement.textContent = now.toLocaleDateString(undefined, {
-        weekday: "short", month: "short", day: "numeric"
-    });
+
+    document.querySelector("#timeElement").textContent =
+        now.toLocaleTimeString();
+
+    document.querySelector("#dateElement").textContent =
+        now.toLocaleDateString(undefined, {
+            weekday: "short",
+            month: "short",
+            day: "numeric"
+        });
 }
+
 updateTime();
 setInterval(updateTime, 1000);
 
-// window stuff
+
+/* =========================
+   WINDOWS
+   ========================= */
+
 var biggestIndex = 10;
 
-function bringToFront(element) {
+function bringToFront(windowElement) {
     biggestIndex++;
-    element.style.zIndex = biggestIndex;
+    windowElement.style.zIndex = biggestIndex;
 }
 
-function dragWindow(win) {
-    var header = document.querySelector("#" + win.id + "header");
-    var startX, startY;
+function openApp(windowElement, iconElement) {
+    windowElement.style.display = "flex";
+    bringToFront(windowElement);
 
-    header.addEventListener("mousedown", function(e) {
-        e.preventDefault();
-        bringToFront(win);
-        startX = e.clientX;
-        startY = e.clientY;
+    if (iconElement) {
+        iconElement.classList.add("selected");
+    }
+}
 
-        function onMove(e) {
-            var dx = startX - e.clientX;
-            var dy = startY - e.clientY;
-            startX = e.clientX;
-            startY = e.clientY;
-            win.style.left = win.offsetLeft - dx + "px";
-            win.style.top = win.offsetTop - dy + "px";
+function closeApp(windowElement, iconElement) {
+    windowElement.style.display = "none";
+
+    if (iconElement) {
+        iconElement.classList.remove("selected");
+    }
+}
+
+
+/* =========================
+   DRAGGING
+   ========================= */
+
+function dragWindow(windowElement) {
+    var header = document.querySelector("#" + windowElement.id + "header");
+
+    var mouseX = 0;
+    var mouseY = 0;
+
+    header.addEventListener("mousedown", function(event) {
+
+        if (event.target.classList.contains("closebutton")) {
+            return;
         }
 
-        function onUp() {
-            document.removeEventListener("mousemove", onMove);
+        event.preventDefault();
+
+        bringToFront(windowElement);
+
+        mouseX = event.clientX;
+        mouseY = event.clientY;
+
+        function moveWindow(event) {
+            var changeX = event.clientX - mouseX;
+            var changeY = event.clientY - mouseY;
+
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+
+            windowElement.style.left =
+                windowElement.offsetLeft + changeX + "px";
+
+            windowElement.style.top =
+                windowElement.offsetTop + changeY + "px";
         }
 
-        document.addEventListener("mousemove", onMove);
-        document.addEventListener("mouseup", onUp, { once: true });
+        function stopMoving() {
+            document.removeEventListener("mousemove", moveWindow);
+        }
+
+        document.addEventListener("mousemove", moveWindow);
+        document.addEventListener("mouseup", stopMoving, {
+            once: true
+        });
     });
 }
 
-var allWindows = document.querySelectorAll(".window");
-allWindows.forEach(function(win) {
-    dragWindow(win);
-    win.addEventListener("mousedown", function() {
-        bringToFront(win);
+var windows = document.querySelectorAll(".window");
+
+windows.forEach(function(windowElement) {
+
+    dragWindow(windowElement);
+
+    windowElement.addEventListener("mousedown", function() {
+        bringToFront(windowElement);
     });
+
 });
 
-// welcome
+
+/* =========================
+   APP REFERENCES
+   ========================= */
+
 var welcome = document.querySelector("#welcome");
-document.querySelector("#welcomeopen").addEventListener("click", function() {
-    welcome.style.display = "flex";
-    bringToFront(welcome);
+var notes = document.querySelector("#notes");
+var projects = document.querySelector("#projects");
+var calculator = document.querySelector("#calculator");
+var weather = document.querySelector("#weather");
+var about = document.querySelector("#about");
+
+var welcomeIcon = document.querySelector("#welcomeopen");
+var notesIcon = document.querySelector("#notesIcon");
+var projectsIcon = document.querySelector("#projectsIcon");
+var calculatorIcon = document.querySelector("#calculatorIcon");
+var weatherIcon = document.querySelector("#weatherIcon");
+var aboutIcon = document.querySelector("#aboutIcon");
+
+
+/* =========================
+   OPENING AND CLOSING APPS
+   ========================= */
+
+welcomeIcon.addEventListener("click", function() {
+    openApp(welcome);
 });
+
 document.querySelector("#welcomeclose").addEventListener("click", function() {
-    welcome.style.display = "none";
+    closeApp(welcome);
 });
+
+
+notesIcon.addEventListener("click", function() {
+    openApp(notes, notesIcon);
+
+    var savedNote = localStorage.getItem("rayyanos-last-note");
+
+    if (savedNote !== null) {
+        showNote(parseInt(savedNote, 10));
+    }
+});
+
+document.querySelector("#notesclose").addEventListener("click", function() {
+    closeApp(notes, notesIcon);
+});
+
+
+projectsIcon.addEventListener("click", function() {
+    openApp(projects, projectsIcon);
+});
+
+document.querySelector("#projectsclose").addEventListener("click", function() {
+    closeApp(projects, projectsIcon);
+});
+
+
+calculatorIcon.addEventListener("click", function() {
+    openApp(calculator, calculatorIcon);
+});
+
+document.querySelector("#calculatorclose").addEventListener("click", function() {
+    closeApp(calculator, calculatorIcon);
+});
+
+
+weatherIcon.addEventListener("click", function() {
+    openApp(weather, weatherIcon);
+
+    var savedCity = localStorage.getItem("rayyanos-city");
+
+    if (savedCity) {
+        document.querySelector("#cityInput").value = savedCity;
+    }
+});
+
+document.querySelector("#weatherclose").addEventListener("click", function() {
+    closeApp(weather, weatherIcon);
+});
+
+
+aboutIcon.addEventListener("click", function() {
+    openApp(about, aboutIcon);
+});
+
+document.querySelector("#aboutclose").addEventListener("click", function() {
+    closeApp(about, aboutIcon);
+});
+
+
+/* =========================
+   SHUTDOWN
+   ========================= */
 
 document.querySelector("#shutdownBtn").addEventListener("click", function() {
-    document.querySelectorAll(".window").forEach(function(win) {
-        win.style.display = "none";
+
+    var everyWindow = document.querySelectorAll(".window");
+    var everyIcon = document.querySelectorAll(".appicon");
+
+    everyWindow.forEach(function(windowElement) {
+        windowElement.style.display = "none";
     });
-    document.querySelectorAll(".appicon").forEach(function(icon) {
+
+    everyIcon.forEach(function(icon) {
         icon.classList.remove("selected");
     });
+
 });
 
-// notes
-var notes = document.querySelector("#notes");
-var notesIcon = document.querySelector("#notesIcon");
-notesIcon.addEventListener("click", function() {
-    notes.style.display = "flex";
-    bringToFront(notes);
-});
-document.querySelector("#notesclose").addEventListener("click", function() {
-    notes.style.display = "none";
-});
 
-// projects
-var projects = document.querySelector("#projects");
-var projectsIcon = document.querySelector("#projectsIcon");
-projectsIcon.addEventListener("click", function() {
-    projects.style.display = "flex";
-    bringToFront(projects);
-});
-document.querySelector("#projectsclose").addEventListener("click", function() {
-    projects.style.display = "none";
-});
+/* =========================
+   STARTUP
+   ========================= */
 
-// calculator
-var calculator = document.querySelector("#calculator");
-var calculatorIcon = document.querySelector("#calculatorIcon");
-calculatorIcon.addEventListener("click", function() {
-    calculator.style.display = "flex";
-    bringToFront(calculator);
-});
-document.querySelector("#calculatorclose").addEventListener("click", function() {
-    calculator.style.display = "none";
-});
+openApp(welcome);
 
-// weather
-var weather = document.querySelector("#weather");
-var weatherIcon = document.querySelector("#weatherIcon");
-weatherIcon.addEventListener("click", function() {
-    weather.style.display = "flex";
-    bringToFront(weather);
-});
-document.querySelector("#weatherclose").addEventListener("click", function() {
-    weather.style.display = "none";
-});
 
-// about
-var about = document.querySelector("#about");
-var aboutIcon = document.querySelector("#aboutIcon");
-aboutIcon.addEventListener("click", function() {
-    about.style.display = "flex";
-    bringToFront(about);
-});
-document.querySelector("#aboutclose").addEventListener("click", function() {
-    about.style.display = "none";
-});
-
-bringToFront(welcome);
-
-// notes data
+/* =========================
+   NOTES
+   ========================= */
 
 var notesData = [
     {
         title: "Welcome",
         date: "09/05/2026",
-        content: "<h1>Welcome to Study Notes</h1><p>This is the notes app inside RayyanOS. Use it for school notes, revision topics, ideas, and useful information.</p><blockquote>Keep your notes simple and easy to scan.</blockquote>"
+        content:
+            "<h1>Welcome to Study Notes</h1>" +
+            "<p>This is the little notes section I made for RayyanOS.</p>" +
+            "<p>I wanted somewhere simple to put school notes, ideas and random things I want to remember.</p>" +
+            "<blockquote>Keep things simple and easy to find.</blockquote>"
     },
+
     {
         title: "Math",
         date: "09/05/2026",
-        content: "<h1>Math Notes</h1><h2>Quadratic Formula</h2><p>For equations in the form:</p><p><strong>ax\u00b2 + bx + c = 0</strong></p><blockquote>x = (-b \u00b1 sqrt(b\u00b2 - 4ac)) / 2a</blockquote>"
+        content:
+            "<h1>Math Notes</h1>" +
+            "<h2>Quadratic Formula</h2>" +
+            "<p>For an equation in the form:</p>" +
+            "<p><strong>ax² + bx + c = 0</strong></p>" +
+            "<blockquote>x = (-b ± √(b² - 4ac)) / 2a</blockquote>"
     },
+
     {
         title: "Programming",
         date: "09/05/2026",
-        content: "<h1>Programming Notes</h1><p>JavaScript basics to learn for building web stuff.</p><ul><li>Variables</li><li>Functions</li><li>Arrays</li><li>Objects</li><li>Event listeners</li><li>DOM manipulation</li></ul>"
+        content:
+            "<h1>Programming Notes</h1>" +
+            "<p>Some JavaScript things I have been learning:</p>" +
+            "<ul>" +
+            "<li>Variables</li>" +
+            "<li>Functions</li>" +
+            "<li>Arrays</li>" +
+            "<li>Objects</li>" +
+            "<li>Event listeners</li>" +
+            "<li>Changing the DOM</li>" +
+            "</ul>"
     }
 ];
 
@@ -154,302 +273,590 @@ var sidebar = document.querySelector("#sidebar");
 var notesContent = document.querySelector("#notesContent");
 
 for (var i = 0; i < notesData.length; i++) {
+
     var note = notesData[i];
+
     var item = document.createElement("div");
+
     item.className = "note-item";
-    item.innerHTML = '<p class="note-title">' + note.title + '</p><p class="note-date">' + note.date + '</p>';
+
+    item.innerHTML =
+        '<p class="note-title">' + note.title + "</p>" +
+        '<p class="note-date">' + note.date + "</p>";
 
     (function(index) {
+
         item.addEventListener("click", function() {
             showNote(index);
         });
+
     })(i);
 
     sidebar.appendChild(item);
 }
 
+
 function showNote(index) {
+
+    if (!notesData[index]) {
+        index = 0;
+    }
+
     notesContent.innerHTML = notesData[index].content;
 
-    var items = document.querySelectorAll(".note-item");
-    for (var j = 0; j < items.length; j++) {
+    localStorage.setItem("rayyanos-last-note", index);
+
+    var noteItems = document.querySelectorAll(".note-item");
+
+    for (var j = 0; j < noteItems.length; j++) {
+
         if (j === index) {
-            items[j].classList.add("active");
+            noteItems[j].classList.add("active");
         } else {
-            items[j].classList.remove("active");
+            noteItems[j].classList.remove("active");
         }
+
     }
 }
 
 showNote(0);
 
-// projects
+
+/* =========================
+   PROJECTS
+   ========================= */
 
 var projectsData = [
     {
         name: "Study OS",
         status: "In Progress",
-        description: "A student-focused Web OS for managing studying, tasks, time, and school projects.",
+        description: "My study-planning website that I have been building and changing over time.",
         technologies: ["HTML", "CSS", "JavaScript"],
-        link: "PUT_GITHUB_LINK_HERE"
+        link: "https://rayyans4890-png.github.io/Study-OS/"
     },
+
     {
         name: "RayyanOS",
         status: "In Progress",
-        description: "A browser-based operating system with draggable windows, desktop apps, and utilities.",
+        description: "This WebOS project. I made it to experiment with windows, desktop apps and JavaScript.",
         technologies: ["HTML", "CSS", "JavaScript"],
-        link: "PUT_GITHUB_LINK_HERE"
+        link: "https://github.com/rayyans4890-png/WebOS"
     },
+
     {
         name: "Slackbot",
         status: "Completed",
-        description: "A Slack bot with commands for pinging, jokes, cat facts, and basic bot utilities.",
+        description: "A small Slack bot with commands such as ping, jokes, cat facts and other utilities.",
         technologies: ["Node.js", "Bolt", "JavaScript"],
-        link: "PUT_GITHUB_LINK_HERE"
+        link: "https://github.com/rayyans4890-png/Slack-bot-rayyans4890"
     },
+
     {
         name: "Web Experiments",
         status: "Exploring",
-        description: "A collection of small websites and experiments made while learning new web development ideas.",
+        description: "Smaller web projects I make when I am trying something new.",
         technologies: ["HTML", "CSS", "JavaScript"],
-        link: "PUT_GITHUB_LINK_HERE"
+        link: "#"
     }
 ];
 
 var projectGrid = document.querySelector("#projectGrid");
 var projectCount = document.querySelector("#projectCount");
 
-for (var i = 0; i < projectsData.length; i++) {
-    var p = projectsData[i];
+for (var p = 0; p < projectsData.length; p++) {
+
+    var project = projectsData[p];
+
     var card = document.createElement("div");
+
     card.className = "project-card";
 
     var techHTML = "";
-    for (var t = 0; t < p.technologies.length; t++) {
-        techHTML += '<span class="tech-tag">' + p.technologies[t] + '</span>';
+
+    for (var t = 0; t < project.technologies.length; t++) {
+        techHTML +=
+            '<span class="tech-tag">' +
+            project.technologies[t] +
+            "</span>";
     }
 
     card.innerHTML =
-        '<span class="project-status">' + p.status + '</span>' +
-        '<h2>' + p.name + '</h2>' +
-        '<p>' + p.description + '</p>' +
-        '<div class="project-tech">' + techHTML + '</div>' +
-        '<a class="project-link" href="' + p.link + '" target="_blank" rel="noopener noreferrer">View project</a>';
+        '<span class="project-status">' +
+        project.status +
+        "</span>" +
+
+        "<h2>" +
+        project.name +
+        "</h2>" +
+
+        "<p>" +
+        project.description +
+        "</p>" +
+
+        '<div class="project-tech">' +
+        techHTML +
+        "</div>" +
+
+        '<a class="project-link" href="' +
+        project.link +
+        '" target="_blank" rel="noopener noreferrer">View project</a>';
 
     projectGrid.appendChild(card);
 }
 
 projectCount.textContent = projectsData.length;
 
-// calculator
+
+/* =========================
+   CALCULATOR
+   ========================= */
 
 var calcDisplay = document.querySelector("#calcDisplay");
+
 var current = "0";
 var previous = "";
 var operator = "";
 var waitingForOperand = false;
 
+
 function updateDisplay() {
-    var val = current;
-    if (val.length > 12) val = val.substring(0, 12);
-    calcDisplay.textContent = val;
+
+    var shownValue = current;
+
+    if (shownValue.length > 12) {
+        shownValue = shownValue.substring(0, 12);
+    }
+
+    calcDisplay.textContent = shownValue;
 }
 
-function inputNumber(num) {
+
+function inputNumber(number) {
+
+    if (current === "Error") {
+        calcClear();
+    }
+
     if (waitingForOperand) {
-        current = num;
+        current = number;
         waitingForOperand = false;
     } else {
-        current = (current === "0") ? num : current + num;
+        if (current === "0") {
+            current = number;
+        } else {
+            current += number;
+        }
     }
+
     updateDisplay();
 }
 
+
 function inputDecimal() {
+
+    if (current === "Error") {
+        calcClear();
+    }
+
     if (waitingForOperand) {
         current = "0.";
         waitingForOperand = false;
-        updateDisplay();
-        return;
-    }
-    if (current.indexOf(".") === -1) {
+    } else if (current.indexOf(".") === -1) {
         current += ".";
     }
+
     updateDisplay();
 }
 
-function doMath(a, b, op) {
-    var x = parseFloat(a);
-    var y = parseFloat(b);
-    if (op === "+") return x + y;
-    if (op === "-") return x - y;
-    if (op === "*") return x * y;
-    if (op === "/") {
-        if (y === 0) return "Error";
-        return x / y;
+
+function doMath(first, second, mathOperator) {
+
+    var firstNumber = parseFloat(first);
+    var secondNumber = parseFloat(second);
+
+    if (mathOperator === "+") {
+        return firstNumber + secondNumber;
     }
-    return y;
+
+    if (mathOperator === "-") {
+        return firstNumber - secondNumber;
+    }
+
+    if (mathOperator === "*") {
+        return firstNumber * secondNumber;
+    }
+
+    if (mathOperator === "/") {
+
+        if (secondNumber === 0) {
+            return "Error";
+        }
+
+        return firstNumber / secondNumber;
+    }
+
+    return secondNumber;
 }
 
-function inputOperator(op) {
-    var result = doMath(previous, current, operator);
+
+function inputOperator(newOperator) {
+
+    if (current === "Error") {
+        return;
+    }
 
     if (previous !== "" && !waitingForOperand) {
+
+        var result = doMath(previous, current, operator);
+
         if (result === "Error") {
             current = "Error";
             previous = "";
             operator = "";
             waitingForOperand = true;
+
             updateDisplay();
             return;
         }
+
         current = String(result);
     }
 
     previous = current;
-    operator = op;
+    operator = newOperator;
     waitingForOperand = true;
+
     updateDisplay();
 }
 
+
 function calcEquals() {
-    if (operator === "" || previous === "") return;
+
+    if (operator === "" || previous === "") {
+        return;
+    }
 
     var result = doMath(previous, current, operator);
+
     if (result === "Error") {
         current = "Error";
     } else {
         current = String(result);
     }
+
     previous = "";
     operator = "";
     waitingForOperand = true;
+
     updateDisplay();
 }
 
+
 function calcClear() {
+
     current = "0";
     previous = "";
     operator = "";
     waitingForOperand = false;
+
     updateDisplay();
 }
 
+
 function calcBackspace() {
-    if (waitingForOperand) return;
+
+    if (waitingForOperand || current === "Error") {
+        return;
+    }
+
     if (current.length > 1) {
         current = current.substring(0, current.length - 1);
     } else {
         current = "0";
     }
+
     updateDisplay();
 }
+
 
 function calcPercent() {
-    current = String(parseFloat(current) / 100);
-    updateDisplay();
-}
 
-var calcButtons = document.querySelectorAll(".calc-btn");
-calcButtons.forEach(function(btn) {
-    btn.addEventListener("click", function() {
-        var action = btn.getAttribute("data-action");
-        var value = btn.getAttribute("data-value");
-
-        if (action === "number") inputNumber(value);
-        else if (action === "decimal") inputDecimal();
-        else if (action === "operator") inputOperator(value);
-        else if (action === "equals") calcEquals();
-        else if (action === "clear") calcClear();
-        else if (action === "backspace") calcBackspace();
-        else if (action === "percent") calcPercent();
-    });
-});
-
-// keyboard controls for calculator
-document.addEventListener("keydown", function(e) {
-    if (calculator.style.display === "none") return;
-
-    if (e.key >= "0" && e.key <= "9") inputNumber(e.key);
-    else if (e.key === ".") inputDecimal();
-    else if (e.key === "+") inputOperator("+");
-    else if (e.key === "-") inputOperator("-");
-    else if (e.key === "*") inputOperator("*");
-    else if (e.key === "/") { inputOperator("/"); e.preventDefault(); }
-    else if (e.key === "Enter" || e.key === "=") calcEquals();
-    else if (e.key === "Escape") calcClear();
-    else if (e.key === "Backspace") calcBackspace();
-});
-
-// weather
-
-var weatherResult = document.querySelector("#weatherResult");
-
-function getWeatherDescription(code) {
-    var descriptions = {
-        0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
-        45: "Fog", 48: "Rime fog",
-        51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
-        61: "Slight rain", 63: "Moderate rain", 65: "Heavy rain",
-        71: "Slight snow", 73: "Moderate snow", 75: "Heavy snow",
-        80: "Slight rain showers", 81: "Moderate rain showers", 82: "Violent rain showers",
-        85: "Slight snow showers", 86: "Heavy snow showers",
-        95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Severe thunderstorm"
-    };
-    return descriptions[code] || "Unknown";
-}
-
-function checkWeather() {
-    var cityInput = document.querySelector("#cityInput");
-    var city = cityInput.value.trim();
-
-    if (!city) {
-        weatherResult.innerHTML = '<span class="weather-error">Please enter a city name.</span>';
+    if (current === "Error") {
         return;
     }
 
-    weatherResult.innerHTML = '<span class="weather-loading">Loading weather data...</span>';
+    current = String(parseFloat(current) / 100);
 
-    var geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(city) + "&count=1";
+    updateDisplay();
+}
+
+
+/* calculator buttons */
+
+var calcButtons = document.querySelectorAll(".calc-btn");
+
+calcButtons.forEach(function(button) {
+
+    button.addEventListener("click", function() {
+
+        var action = button.getAttribute("data-action");
+        var value = button.getAttribute("data-value");
+
+        if (action === "number") {
+            inputNumber(value);
+        } else if (action === "decimal") {
+            inputDecimal();
+        } else if (action === "operator") {
+            inputOperator(value);
+        } else if (action === "equals") {
+            calcEquals();
+        } else if (action === "clear") {
+            calcClear();
+        } else if (action === "backspace") {
+            calcBackspace();
+        } else if (action === "percent") {
+            calcPercent();
+        }
+
+    });
+
+});
+
+
+/* calculator keyboard */
+
+document.addEventListener("keydown", function(event) {
+
+    if (calculator.style.display === "none") {
+        return;
+    }
+
+    if (event.key >= "0" && event.key <= "9") {
+        inputNumber(event.key);
+        return;
+    }
+
+    if (event.key === ".") {
+        inputDecimal();
+        return;
+    }
+
+    if (event.key === "+") {
+        inputOperator("+");
+        return;
+    }
+
+    if (event.key === "-") {
+        inputOperator("-");
+        return;
+    }
+
+    if (event.key === "*") {
+        inputOperator("*");
+        return;
+    }
+
+    if (event.key === "/") {
+        inputOperator("/");
+        event.preventDefault();
+        return;
+    }
+
+    if (event.key === "Enter" || event.key === "=") {
+        calcEquals();
+        return;
+    }
+
+    if (event.key === "Escape") {
+        calcClear();
+        return;
+    }
+
+    if (event.key === "Backspace") {
+        calcBackspace();
+    }
+
+});
+
+
+/* =========================
+   WEATHER
+   ========================= */
+
+var weatherResult = document.querySelector("#weatherResult");
+var cityInput = document.querySelector("#cityInput");
+
+
+function getWeatherDescription(code) {
+
+    var descriptions = {
+        0: "Clear sky",
+        1: "Mostly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+
+        45: "Fog",
+        48: "Rime fog",
+
+        51: "Light drizzle",
+        53: "Drizzle",
+        55: "Heavy drizzle",
+
+        61: "Light rain",
+        63: "Rain",
+        65: "Heavy rain",
+
+        71: "Light snow",
+        73: "Snow",
+        75: "Heavy snow",
+
+        80: "Light rain showers",
+        81: "Rain showers",
+        82: "Heavy rain showers",
+
+        85: "Light snow showers",
+        86: "Heavy snow showers",
+
+        95: "Thunderstorm",
+        96: "Thunderstorm with hail",
+        99: "Severe thunderstorm"
+    };
+
+    return descriptions[code] || "Unknown weather";
+}
+
+
+function showWeatherMessage(message, className) {
+
+    weatherResult.innerHTML =
+        '<span class="' +
+        className +
+        '">' +
+        message +
+        "</span>";
+}
+
+
+function checkWeather() {
+
+    var city = cityInput.value.trim();
+
+    if (!city) {
+        showWeatherMessage(
+            "Please enter a city name.",
+            "weather-error"
+        );
+        return;
+    }
+
+    localStorage.setItem("rayyanos-city", city);
+
+    showWeatherMessage(
+        "Loading weather...",
+        "weather-loading"
+    );
+
+    var geoUrl =
+        "https://geocoding-api.open-meteo.com/v1/search" +
+        "?name=" +
+        encodeURIComponent(city) +
+        "&count=1";
 
     fetch(geoUrl)
-        .then(function(response) { return response.json(); })
+        .then(function(response) {
+            return response.json();
+        })
+
         .then(function(geoData) {
+
             if (!geoData.results || geoData.results.length === 0) {
-                weatherResult.innerHTML = '<span class="weather-error">City not found. Try a different name.</span>';
+                showWeatherMessage(
+                    "I couldn't find that city. Try another name.",
+                    "weather-error"
+                );
+
                 return;
             }
 
             var place = geoData.results[0];
-            var lat = place.latitude;
-            var lon = place.longitude;
+
+            var latitude = place.latitude;
+            var longitude = place.longitude;
             var country = place.country || "";
 
-            var weatherUrl = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
-                "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&temperature_unit=celsius";
+            var weatherUrl =
+                "https://api.open-meteo.com/v1/forecast" +
+                "?latitude=" + latitude +
+                "&longitude=" + longitude +
+                "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
+                "&temperature_unit=celsius";
 
             return fetch(weatherUrl)
-                .then(function(response) { return response.json(); })
+                .then(function(response) {
+                    return response.json();
+                })
+
                 .then(function(data) {
-                    var current = data.current;
-                    var temp = Math.round(current.temperature_2m);
-                    var humidity = current.relative_humidity_2m;
-                    var wind = Math.round(current.wind_speed_10m);
-                    var condition = getWeatherDescription(current.weather_code);
+
+                    var currentWeather = data.current;
+
+                    var temperature =
+                        Math.round(currentWeather.temperature_2m);
+
+                    var humidity =
+                        currentWeather.relative_humidity_2m;
+
+                    var wind =
+                        Math.round(currentWeather.wind_speed_10m);
+
+                    var condition =
+                        getWeatherDescription(
+                            currentWeather.weather_code
+                        );
 
                     weatherResult.innerHTML =
-                        '<div class="weather-city">' + city + '</div>' +
-                        '<div class="weather-temp">' + temp + '&deg;C</div>' +
-                        '<div class="weather-condition">' + condition + '</div>' +
-                        '<div class="weather-details">Humidity: ' + humidity + '% | Wind: ' + wind + ' km/h | ' + country + '</div>';
+                        '<div class="weather-city">' +
+                        city +
+                        "</div>" +
+
+                        '<div class="weather-temp">' +
+                        temperature +
+                        "&deg;C</div>" +
+
+                        '<div class="weather-condition">' +
+                        condition +
+                        "</div>" +
+
+                        '<div class="weather-details">' +
+                        "Humidity: " +
+                        humidity +
+                        "% | Wind: " +
+                        wind +
+                        " km/h | " +
+                        country +
+                        "</div>";
                 });
         })
+
         .catch(function() {
-            weatherResult.innerHTML = '<span class="weather-error">Could not load weather. Check your internet connection.</span>';
+
+            showWeatherMessage(
+                "Weather could not be loaded. Check your connection and try again.",
+                "weather-error"
+            );
+
         });
 }
 
-document.querySelector("#checkWeatherBtn").addEventListener("click", checkWeather);
-document.querySelector("#cityInput").addEventListener("keydown", function(e) {
-    if (e.key === "Enter") checkWeather();
+
+document.querySelector("#checkWeatherBtn")
+    .addEventListener("click", checkWeather);
+
+
+cityInput.addEventListener("keydown", function(event) {
+
+    if (event.key === "Enter") {
+        checkWeather();
+    }
+
 });
